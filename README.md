@@ -28,7 +28,7 @@ The cwd bundle includes its npm dependencies and can be relocated without source
 
 ## Workspace policy
 
-MCP `child_create` gains a **required top-level `cwd`** argument; `settings.cwd` is rejected in this tool:
+MCP `create_subagent` gains a **required top-level `cwd`** argument; `settings.cwd` is rejected in this tool:
 
 ```json
 {"name":"coder","cwd":"workers/coder","settings":{"harness":"pi","provider":"openai-codex","model":"gpt-6-luna"}}

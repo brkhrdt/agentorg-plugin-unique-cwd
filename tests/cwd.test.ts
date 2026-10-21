@@ -71,16 +71,16 @@ test("cwd plugin augments the real MCP create tool and reports canonical cwd to 
     env: { ...(process.env as Record<string, string>), ORG_SOCKET: server.organization.socketPath, ORG_TOKEN: rt.token },
   }));
   try {
-    const tool = (await mcp.listTools()).tools.find(t => t.name === "child_create")!;
+    const tool = (await mcp.listTools()).tools.find(t => t.name === "create_subagent")!;
     expect(tool.inputSchema.required).toContain("cwd");
     expect(tool.inputSchema.properties?.cwd).toMatchObject({ type: "string" });
     const settings = { harness: "fixture", model: "test" };
     for (const args of [{ settings }, { settings, cwd: "" }, { settings: { ...settings, cwd: "child" }, cwd: "child" }]) {
-      const rejected = await mcp.callTool({ name: "child_create", arguments: args });
+      const rejected = await mcp.callTool({ name: "create_subagent", arguments: args });
       expect(rejected.isError).toBe(true);
       expect(JSON.parse((rejected.content as any)[0].text).code).toBe("INVALID_PARAMS");
     }
-    const result = await mcp.callTool({ name: "child_create", arguments: { settings, cwd: "inside-link" } });
+    const result = await mcp.callTool({ name: "create_subagent", arguments: { settings, cwd: "inside-link" } });
     expect(result.isError).not.toBe(true);
     const operation = await client.wait(JSON.parse((result.content as any)[0].text));
     expect(operation.status).toBe("completed");

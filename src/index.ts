@@ -37,7 +37,7 @@ export const cwdPlugin: ServerPlugin = {
   apiVersion: 1,
   name: "cwd",
   setup(host: PluginHost) {
-    host.transformTool("child_create", (tool) => {
+    host.transformTool("create_subagent", (tool) => {
       const properties = { ...tool.inputSchema.properties };
       // cwd has one unambiguous location in this tool: the required top-level argument.
       const settings = properties.settings as {

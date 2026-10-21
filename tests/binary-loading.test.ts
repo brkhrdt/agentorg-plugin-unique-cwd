@@ -73,12 +73,12 @@ test.skipIf(!process.env.ORG_BINARY)("compiled host loads relocated cwd bundle a
     const bridge = await Bun.file(join(dir, "bridge.json")).json();
     mcp = new Client({ name: "cwd-binary-test", version: "1" });
     await mcp.connect(new StdioClientTransport({ command: bridge.command, args: bridge.args, cwd: dir, env: { PATH: dir, ...Object.fromEntries(bridge.env.map((entry: { name: string; value: string }) => [entry.name, entry.value])) } }));
-    const tool = (await mcp.listTools()).tools.find(t => t.name === "child_create")!;
+    const tool = (await mcp.listTools()).tools.find(t => t.name === "create_subagent")!;
     expect(tool.inputSchema.required).toContain("cwd");
-    const malformed = await mcp.callTool({ name: "child_create", arguments: { settings: { harness: "fixture", model: "test" } } });
+    const malformed = await mcp.callTool({ name: "create_subagent", arguments: { settings: { harness: "fixture", model: "test" } } });
     expect(malformed.isError).toBe(true);
     expect(JSON.parse((malformed.content as any)[0].text).code).toBe("INVALID_PARAMS");
-    const invalid = await mcp.callTool({ name: "child_create", arguments: { cwd: ".", settings: { harness: "fixture", model: "test" } } });
+    const invalid = await mcp.callTool({ name: "create_subagent", arguments: { cwd: ".", settings: { harness: "fixture", model: "test" } } });
     const op = await client.wait(JSON.parse((invalid.content as any)[0].text));
     expect(op.error?.code).toBe("INVALID_PARAMS");
   } finally {
