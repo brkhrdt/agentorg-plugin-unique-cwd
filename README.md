@@ -4,13 +4,13 @@ Optional workspace-nesting plugin for [agentorg](../agentorg/README.md), extract
 
 ## Install and load
 
-With the repositories checked out side by side and Bun installed:
+With the repositories checked out side by side and Node.js 22.6+ / npm installed:
 
 ```sh
 cd agentorg-plugin-unique-cwd
-bun install
+npm ci
 cd ../agentorg
-bun start --plugin ../agentorg-plugin-pi-agent/src/index.ts --plugin ../agentorg-plugin-unique-cwd/src/index.ts
+npm start -- --plugin ../agentorg-plugin-pi-agent/src/index.ts --plugin ../agentorg-plugin-unique-cwd/src/index.ts
 ```
 
 This policy plugin does not provide a harness; load your chosen harness plugin separately. It uses plugin API v1 and has only type imports from core.
@@ -19,7 +19,7 @@ For a compiled server, bundle the plugin and load the resulting standalone modul
 
 ```sh
 cd agentorg-plugin-unique-cwd
-bun run build
+npm run build
 cd ../agentorg
 ./dist/agentorg --plugin ../agentorg-plugin-pi-agent/dist/index.js --plugin ../agentorg-plugin-unique-cwd/dist/index.js
 ```
@@ -47,12 +47,12 @@ This is launch-time workspace validation, **not a filesystem sandbox**. Agents s
 The integration tests use a sibling `../agentorg` checkout for the server and MCP bridge, plus a local deterministic ACP fixture; no Pi installation or credentials are needed.
 
 ```sh
-bun run check
-bun test
-bun run build
+npm run check
+npm test
+npm run build
 # Build the core binary first:
-(cd ../agentorg && bun run build)
-bun run test:binary
+(cd ../agentorg && npm run build)
+npm run test:binary
 ```
 
 The binary test relocates the bundle and loads it into the compiled core, exercising canonical cwd, coded containment errors, and the MCP tool schema.

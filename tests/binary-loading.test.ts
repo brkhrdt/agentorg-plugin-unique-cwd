@@ -1,27 +1,27 @@
-import { expect, test } from "bun:test";
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { expect, test } from "./assertions.ts";
+import { spawn } from "node:child_process";
+import { build } from "esbuild";
+import { copyFile, mkdir, mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { OrganizationClient } from "agent-organization/client";
 import type { AgentRecord, Operation } from "agent-organization/types";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 // Opt in after building core and this plugin; deploy without sources/node_modules.
-test.skipIf(!process.env.ORG_BINARY)("compiled host loads relocated cwd bundle and enforces workspace policy", async () => {
+test("compiled host loads relocated cwd bundle and enforces workspace policy", { skip: !process.env.ORG_BINARY, timeout: 20_000 }, async () => {
   const dir = await mkdtemp(join(tmpdir(), "cwd-binary-"));
-  let server: ReturnType<typeof Bun.spawn> | undefined;
+  let server: ReturnType<typeof spawn> | undefined;
   let client: OrganizationClient | undefined;
   let mcp: Client | undefined;
   try {
     const binary = join(dir, "agentorg");
     await copyFile(resolve(process.env.ORG_BINARY!), binary);
     const plugin = join(dir, "cwd.js");
-    await copyFile(join(import.meta.dir, "../dist/index.js"), plugin);
-    const fixture = await Bun.build({ entrypoints: [join(import.meta.dir, "fixtures/agent.ts")], target: "bun" });
-    expect(fixture.success).toBe(true);
+    await copyFile(join(dirname(new URL(import.meta.url).pathname), "../dist/index.js"), plugin);
     const agentScript = join(dir, "agent.js");
-    await Bun.write(agentScript, fixture.outputs[0]!);
+    await build({ entryPoints: [join(dirname(new URL(import.meta.url).pathname), "fixtures/agent.ts")], bundle: true, platform: "node", format: "esm", outfile: agentScript });
     const harness = join(dir, "harness.js");
     await writeFile(harness, `
       import { writeFileSync } from "node:fs";
@@ -41,16 +41,16 @@ test.skipIf(!process.env.ORG_BINARY)("compiled host loads relocated cwd bundle a
     const workspace = join(dir, "workspace");
     await mkdir(join(workspace, "child"), { recursive: true });
     const socket = join(dir, "data/server.sock");
-    server = Bun.spawn([binary, "--data-dir", join(dir, "data"), "--plugin", harness, "--plugin", plugin], {
-      cwd: dir, env: { PATH: dir }, stdout: "ignore", stderr: "pipe",
+    server = spawn(binary, ["--data-dir", join(dir, "data"), "--plugin", harness, "--plugin", plugin], {
+      cwd: dir, env: { PATH: dir }, stdio: ["ignore", "ignore", "pipe"],
     });
     for (let attempt = 0; attempt < 250 && !client; attempt++) {
       try { client = await OrganizationClient.connect(socket); }
-      catch { await Bun.sleep(20); }
+      catch { await new Promise(resolve => setTimeout(resolve, 20)); }
     }
     if (!client) {
-      if (server.exitCode === null) { server.kill("SIGTERM"); await server.exited; }
-      const stderr = await new Response(server.stderr as ReadableStream<Uint8Array>).text();
+      if (server.exitCode === null) { server.kill("SIGTERM"); await new Promise<void>(resolve => server!.once("exit", () => resolve())); }
+      const stderr = "";
       throw new Error(`Compiled server did not start: ${stderr}`);
     }
     const create = async (parentId: string | null, cwd: string) => client!.wait(await client!.request<Operation>("agent.create", {
@@ -70,7 +70,7 @@ test.skipIf(!process.env.ORG_BINARY)("compiled host loads relocated cwd bundle a
     expect(prompt.result).toMatchObject({ text: child.settings.cwd });
 
     // Use the root's host-owned MCP spec recorded by the trusted fixture harness.
-    const bridge = await Bun.file(join(dir, "bridge.json")).json();
+    const bridge = JSON.parse(await readFile(join(dir, "bridge.json"), "utf8"));
     mcp = new Client({ name: "cwd-binary-test", version: "1" });
     await mcp.connect(new StdioClientTransport({ command: bridge.command, args: bridge.args, cwd: dir, env: { PATH: dir, ...Object.fromEntries(bridge.env.map((entry: { name: string; value: string }) => [entry.name, entry.value])) } }));
     const tool = (await mcp.listTools()).tools.find(t => t.name === "create_subagent")!;
@@ -84,7 +84,7 @@ test.skipIf(!process.env.ORG_BINARY)("compiled host loads relocated cwd bundle a
   } finally {
     await mcp?.close();
     client?.close();
-    if (server && server.exitCode === null) { server.kill("SIGTERM"); await server.exited; }
+    if (server && server.exitCode === null) { server.kill("SIGTERM"); await new Promise<void>(resolve => server!.once("exit", () => resolve())); }
     await rm(dir, { recursive: true, force: true });
   }
-}, 20_000);
+});
