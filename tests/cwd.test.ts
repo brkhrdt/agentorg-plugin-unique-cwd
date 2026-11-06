@@ -18,7 +18,7 @@ const harness: ServerPlugin = {
       name: "fixture",
       launch: () => ({
         command: process.execPath,
-        args: [join(dirname(new URL(import.meta.url).pathname), "fixtures", "agent.ts")],
+        args: ["--import", "tsx", join(dirname(new URL(import.meta.url).pathname), "fixtures", "agent.ts")],
         // The cwd plugin must override even a harness-provided working directory.
         cwd: process.cwd(),
       }),
@@ -67,7 +67,7 @@ test("cwd plugin augments the real MCP create tool and reports canonical cwd to 
   const mcp = new Client({ name: "cwd-test", version: "1" });
   await mcp.connect(new StdioClientTransport({
     command: process.execPath,
-    args: [join(dirname(new URL(import.meta.url).pathname), "../../agentorg/src/mcp-bridge.ts")],
+    args: ["--import", "tsx", join(dirname(new URL(import.meta.url).pathname), "../../agentorg/src/mcp-bridge.ts")],
     env: { ...(process.env as Record<string, string>), ORG_SOCKET: server.organization.socketPath, ORG_TOKEN: rt.token },
   }));
   try {
