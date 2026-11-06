@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "./assertions.ts";
+import { createRequire } from "node:module";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -10,6 +11,7 @@ import { cwdPlugin } from "../src/index.ts";
 import type { ServerPlugin } from "agent-organization/plugin";
 import type { AgentRecord, Operation } from "agent-organization/types";
 
+const tsxImport = createRequire(import.meta.url).resolve("tsx");
 const harness: ServerPlugin = {
   apiVersion: 1,
   name: "fixture",
@@ -18,7 +20,7 @@ const harness: ServerPlugin = {
       name: "fixture",
       launch: () => ({
         command: process.execPath,
-        args: ["--import", "tsx", join(dirname(new URL(import.meta.url).pathname), "fixtures", "agent.ts")],
+        args: ["--import", tsxImport, join(dirname(new URL(import.meta.url).pathname), "fixtures", "agent.ts")],
         // The cwd plugin must override even a harness-provided working directory.
         cwd: process.cwd(),
       }),
@@ -67,7 +69,7 @@ test("cwd plugin augments the real MCP create tool and reports canonical cwd to 
   const mcp = new Client({ name: "cwd-test", version: "1" });
   await mcp.connect(new StdioClientTransport({
     command: process.execPath,
-    args: ["--import", "tsx", join(dirname(new URL(import.meta.url).pathname), "../../agentorg/src/mcp-bridge.ts")],
+    args: ["--import", tsxImport, join(dirname(new URL(import.meta.url).pathname), "../../agentorg/src/mcp-bridge.ts")],
     env: { ...(process.env as Record<string, string>), ORG_SOCKET: server.organization.socketPath, ORG_TOKEN: rt.token },
   }));
   try {
